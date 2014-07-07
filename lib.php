@@ -254,6 +254,12 @@ class enrol_connect_plugin extends enrol_plugin
                 $user = $enrolment->user;
                 $role = $enrolment->role;
 
+                // Check these things are in Moodle,
+                // skip if not (this plugin does not create new users/roles).
+                if (empty($user->mid) || empty($role->mid)) {
+                    continue;
+                }
+
                 // Unset the username regardless of what happens.
                 unset($map[$user->mid][$instance->id]);
 
