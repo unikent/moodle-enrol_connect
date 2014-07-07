@@ -164,17 +164,35 @@ class enrol_connect_plugin extends enrol_plugin
         global $DB;
 
         $trace = new text_progress_trace();
+        $trace->output("Synchronizing Connect Enrolments...");
 
-        $rs = $DB->get_recordset('enrol', array(
-            'name' => 'connect'
-        ));
+        $instances = array();
 
-        foreach ($rs as $record) {
-            $this->sync($trace, $record->courseid, $record->customint1);
+        if (true) {
+            $rs = $DB->get_recordset_sql('SELECT *
+                FROM {enrol}
+                WHERE enrol=:enrol AND status=:status
+            ', array(
+                'enrol' => 'connect',
+                'status' => ENROL_INSTANCE_ENABLED
+            ));
+
+            foreach ($rs as $record) {
+                if (!isset($instances[$record->courseid])) {
+                    $instances[$record->courseid] = array();
+                }
+
+                $instances[$record->courseid][] = $record;
+            }
+
+            $rs->close();
         }
 
-        $rs->close();
+        foreach ($instances as $course => $set) {
+            $this->sync($set);
+        }
 
+        $trace->output('...connect enrolment updates finished.');
         $trace->finished();
     }
 
@@ -183,9 +201,7 @@ class enrol_connect_plugin extends enrol_plugin
      *
      * @return int 0 means ok, 1 means error, 2 means plugin disabled
      */
-    public function sync(progress_trace $trace, $course, $connectid) {
-        global $DB;
-
+    public function sync($courseid, $instances) {
         if (!enrol_is_enabled('connect')) {
             $trace->finished();
             return 2;
@@ -195,19 +211,63 @@ class enrol_connect_plugin extends enrol_plugin
         core_php_time_limit::raise();
         raise_memory_limit(MEMORY_HUGE);
 
-        $trace->output("Synchronizing Connect Enrolments for {$course}...");
+        $ctx = \context_course::instance($courseid, MUST_EXIST);
 
-        $ctx = \context_course::instance($course, MUST_EXIST);
+        // Let's build a giant list of enrolments we already have.
+        // As we go through each set we will kill off enrolments
+        // from this list and then delete anything that's left after.
+        // Seems to be the most efficient way of doing this, though
+        // it probably isn't very readable (hence the massive comment).
+        $records = $DB->get_records_sql('SELECT e.*, ue.userid FROM {user_enrolments} ue
+            INNER JOIN {enrol} e ON e.id = ue.enrolid
+            WHERE e.enrol=:enrolid AND e.status=:status AND e.courseid=:courseid
+            GROUP BY ue.userid, e.id
+        ', array(
+            'courseid' => $courseid,
+            'enrolid' => 'connect',
+            'status' => ENROL_INSTANCE_ENABLED
+        ));
 
-        // Grab and sync all enrolments.
-        $enrolments = \local_connect\enrolment::get_by("courseid", $connectid, true);
-        foreach ($enrolments as $enrolment) {
-            if (!user_has_role_assignment($enrolment->user->mid, $enrolment->role->mid, $ctx->id)) {
-                enrol_try_internal_enrol($course, $enrolment->user->mid, $enrolment->role->mid);
+        // Map user IDs to instances.
+        $map = array();
+        foreach ($records as $record) {
+            $userid = $record->userid;
+
+            if (!isset($map[$userid])) {
+                $map[$userid] = array();
+            }
+
+            unset($record->userid);
+            $map[$userid][$record->id] = $record;
+        }
+        unset($users);
+
+        // Now, we start the enrolments.
+        foreach ($instances as $instance) {
+            // Get all enrolments for this instance.
+            $enrolments = \local_connect\enrolment::get_by("courseid", $instance->customint1, true);
+
+            // Go through and add everything that needs adding.
+            foreach ($enrolments as $enrolment) {
+                $user = $enrolment->user;
+                $role = $enrolment->role;
+
+                // Unset the username regardless of what happens.
+                unset($map[$user->mid][$instance->id]);
+
+                // If we are not enrolled, enrol us.
+                if (!user_has_role_assignment($user->mid, $role->mid, $ctx->id)) {
+                    $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
+                }
             }
         }
 
-        $trace->output('...connect enrolment updates finished.');
+        // Right! The leftovers are to be removed.
+        foreach ($map as $userid => $instances) {
+            foreach ($instances as $instance) {
+                $this->unenrol_user($instance, $userid);
+            }
+        }
 
         return 0;
     }
