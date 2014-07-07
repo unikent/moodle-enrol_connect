@@ -88,6 +88,33 @@ class enrol_connect_plugin extends enrol_plugin
     }
 
     /**
+     * Returns edit icons for the page with list of instances.
+     * @param stdClass $instance
+     * @return array
+     */
+    public function get_action_icons(stdClass $instance) {
+        global $OUTPUT;
+
+        if ($instance->enrol !== 'connect') {
+            throw new coding_exception('invalid enrol instance!');
+        }
+        $context = context_course::instance($instance->courseid);
+
+        $icons = array();
+
+        if (has_capability('enrol/connect:config', $context)) {
+            $editlink = new moodle_url("/enrol/connect/edit.php", array(
+                'id' => $instance->id,
+                'courseid' => $instance->courseid
+            ));
+            $icons[] = $OUTPUT->action_icon($editlink, new pix_icon('t/edit', get_string('edit'), 'core',
+                    array('class' => 'iconsmall')));
+        }
+
+        return $icons;
+    }
+
+    /**
      * Add new instance of enrol plugin with default settings.
      * By default, this will grab everything with a related mid attached in Connect.
      * 

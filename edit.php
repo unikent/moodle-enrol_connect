@@ -92,13 +92,13 @@ if ($mform->is_cancelled()) {
 } else if ($data = $mform->get_data()) {
     if ($instance->id) {
         $instance->status       = $data->status;
-        $instance->customint1   = $data->connectid;
+        $instance->customint1   = $data->customint1;
         $instance->timemodified = time();
         $DB->update_record('enrol', $instance);
     } else {
         $enrol->add_instance($course, array(
             'status' => $data->status,
-            'customint1' => $data->connectid
+            'customint1' => $data->customint1
         ));
     }
 

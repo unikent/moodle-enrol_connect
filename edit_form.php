@@ -42,14 +42,14 @@ class enrol_connect_edit_form extends moodleform {
         $mform->addElement('select', 'status', 'Enabled', $options);
         $mform->setDefault('status', $plugin->get_config('status'));
 
-        $mform->addElement('text', 'connectid', 'Connect Course ID');
-        $mform->setDefault('connectid', $plugin->get_config('connectid'));
-        $mform->setType('connectid', PARAM_INT);
+        $mform->addElement('text', 'customint1', 'Connect Course ID');
+        $mform->setDefault('customint1', $plugin->get_config('customint1'));
+        $mform->setType('customint1', PARAM_INT);
 
         $mform->addElement('hidden', 'courseid');
         $mform->setType('courseid', PARAM_INT);
 
-        $this->add_action_buttons(true, 'Add Instance');
+        $this->add_action_buttons(true, ($instance->id ? null : 'Add Instance'));
 
         $this->set_data($instance);
     }
@@ -60,11 +60,11 @@ class enrol_connect_edit_form extends moodleform {
         $errors = parent::validation($data, $files);
 
         $exists = $DB->record_exists('connect_course', array(
-            'id' => $data['connectid']
+            'id' => $data['customint1']
         ));
 
         if (!$exists) {
-            $errors['connectid'] = 'Invalid Connect course ID.';
+            $errors['customint1'] = 'Invalid Connect course ID.';
         }
 
         return $errors;
