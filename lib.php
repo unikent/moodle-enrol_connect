@@ -253,7 +253,7 @@ class enrol_connect_plugin extends enrol_plugin
             } else {
                 // This is a default instance.
                 // Get all enrolments for everything that has this course for a mid.
-                $courses = \local_connect\course::get_by('mid', $courseid);
+                $courses = \local_connect\course::get_by('mid', $courseid, true);
                 foreach ($courses as $course) {
                     $ce = \local_connect\enrolment::get_by("courseid", $course->id, true);
                     $enrolments = array_merge($enrolments, $ce);
@@ -274,8 +274,14 @@ class enrol_connect_plugin extends enrol_plugin
                 // Unset the username regardless of what happens.
                 unset($map[$user->mid][$instance->id]);
 
+                // Are we already enrolled?
+                $ue = $DB->record_exists('user_enrolments', array(
+                    'enrolid' => $instance->id,
+                    'userid' => $user->mid
+                ));
+
                 // If we are not enrolled, enrol us.
-                if (!user_has_role_assignment($user->mid, $role->mid, $ctx->id)) {
+                if (!$ue) {
                     $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
                 }
             }
