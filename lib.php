@@ -189,7 +189,7 @@ class enrol_connect_plugin extends enrol_plugin
         }
 
         foreach ($instances as $course => $set) {
-            $this->sync($set);
+            $this->sync($course, $set);
         }
 
         $trace->output('...connect enrolment updates finished.');
@@ -202,6 +202,8 @@ class enrol_connect_plugin extends enrol_plugin
      * @return int 0 means ok, 1 means error, 2 means plugin disabled
      */
     public function sync($courseid, $instances) {
+        global $DB;
+
         if (!enrol_is_enabled('connect')) {
             $trace->finished();
             return 2;
