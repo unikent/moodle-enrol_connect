@@ -161,18 +161,29 @@ class enrol_connect_plugin extends enrol_plugin
      * @return void
      */
     public function cron() {
+        global $DB;
+
         $trace = new text_progress_trace();
-        $this->sync($trace, null);
+
+        $rs = $DB->get_recordset('enrol', array(
+            'name' => 'connect'
+        ));
+
+        foreach ($rs as $record) {
+            $this->sync($trace, $record->courseid, $record->customint1);
+        }
+
+        $rs->close();
+
+        $trace->finished();
     }
 
     /**
      * Sync all meta course links.
      *
-     * @param progress_trace $trace
-     * @param int $courseid one course, empty mean all
      * @return int 0 means ok, 1 means error, 2 means plugin disabled
      */
-    public function sync(progress_trace $trace, $courseid = null) {
+    public function sync(progress_trace $trace, $course, $connectid) {
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
@@ -184,12 +195,19 @@ class enrol_connect_plugin extends enrol_plugin
         core_php_time_limit::raise();
         raise_memory_limit(MEMORY_HUGE);
 
-        $trace->output('Synchronizing Connect Enrolments...');
+        $trace->output("Synchronizing Connect Enrolments for {$course}...");
 
-        // TODO.
+        $ctx = \context_course::instance($course, MUST_EXIST);
+
+        // Grab and sync all enrolments.
+        $enrolments = \local_connect\enrolment::get_by("courseid", $connectid, true);
+        foreach ($enrolments as $enrolment) {
+            if (!user_has_role_assignment($enrolment->user->mid, $enrolment->role->mid, $ctx->id)) {
+                enrol_try_internal_enrol($course, $enrolment->user->mid, $enrolment->role->mid);
+            }
+        }
 
         $trace->output('...connect enrolment updates finished.');
-        $trace->finished();
 
         return 0;
     }
