@@ -247,7 +247,18 @@ class enrol_connect_plugin extends enrol_plugin
         // Now, we start the enrolments.
         foreach ($instances as $instance) {
             // Get all enrolments for this instance.
-            $enrolments = \local_connect\enrolment::get_by("courseid", $instance->customint1, true);
+            $enrolments = array();
+            if ($instance->customint1 > 0) {
+                $enrolments = \local_connect\enrolment::get_by("courseid", $instance->customint1, true);
+            } else {
+                // This is a default instance.
+                // Get all enrolments for everything that has this course for a mid.
+                $courses = \local_connect\course::get_by('mid', $courseid);
+                foreach ($courses as $course) {
+                    $ce = \local_connect\enrolment::get_by("courseid", $course->id, true);
+                    $enrolments = array_merge($enrolments, $ce);
+                }
+            }
 
             // Go through and add everything that needs adding.
             foreach ($enrolments as $enrolment) {
