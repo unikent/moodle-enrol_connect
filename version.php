@@ -29,3 +29,7 @@ $plugin->version   = 2014070700;        // The current plugin version (Date: YYY
 $plugin->requires  = 2014050800;        // Requires this Moodle version.
 $plugin->component = 'enrol_connect';   // Full name of the plugin (used for diagnostics).
 $plugin->cron      = 14400;
+
+$plugin->dependencies = array(
+    'local_connect' => 2014070400
+);

@@ -115,26 +115,6 @@ class enrol_connect_plugin extends enrol_plugin
     }
 
     /**
-     * Add new instance of enrol plugin with default settings.
-     * By default, this will grab everything with a related mid attached in Connect.
-     * 
-     * @param stdClass $course
-     * @return int id of new instance, null if can not be created
-     */
-    public function add_default_instance($course) {
-        $fields = array(
-            'status'          => $this->get_config('status'),
-            'roleid'          => 0,
-            'enrolperiod'     => 0,
-            'expirynotify'    => 0,
-            'notifyall'       => 0,
-            'expirythreshold' => 86400,
-            'customint1'       => 0
-        );
-        return $this->add_instance($course, $fields);
-    }
-
-    /**
      * Add new instance of enrol plugin.
      * @param stdClass $course
      * @param array instance fields
