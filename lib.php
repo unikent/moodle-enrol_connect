@@ -143,6 +143,10 @@ class enrol_connect_plugin extends enrol_plugin
     public function cron() {
         global $DB;
 
+        // Unfortunately this may take a long time, execution can be interrupted safely here.
+        core_php_time_limit::raise();
+        raise_memory_limit(MEMORY_HUGE);
+
         $trace = new text_progress_trace();
         $trace->output("Synchronizing Connect Enrolments...");
 
@@ -184,10 +188,6 @@ class enrol_connect_plugin extends enrol_plugin
         if (!enrol_is_enabled('connect')) {
             return -1;
         }
-
-        // Unfortunately this may take a long time, execution can be interrupted safely here.
-        core_php_time_limit::raise();
-        raise_memory_limit(MEMORY_HUGE);
 
         $ctx = \context_course::instance($courseid, MUST_EXIST);
 
