@@ -196,7 +196,7 @@ class enrol_connect_plugin extends enrol_plugin
         // from this list and then delete anything that's left after.
         // Seems to be the most efficient way of doing this, though
         // it probably isn't very readable (hence the massive comment).
-        $records = $DB->get_records_sql('SELECT e.*, ue.userid FROM {user_enrolments} ue
+        $records = $DB->get_records_sql('SELECT ue.id AS ueid, e.*, ue.userid FROM {user_enrolments} ue
             INNER JOIN {enrol} e ON e.id = ue.enrolid
             WHERE e.enrol=:enrolid AND e.status=:status AND e.courseid=:courseid
             GROUP BY ue.userid, e.id
@@ -216,6 +216,7 @@ class enrol_connect_plugin extends enrol_plugin
             }
 
             unset($record->userid);
+            unset($record->ueid);
             $map[$userid][$record->id] = $record;
         }
         unset($users);
