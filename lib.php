@@ -176,13 +176,13 @@ class enrol_connect_plugin extends enrol_plugin
     /**
      * Sync all meta course links.
      *
-     * @return int 0 means ok, 1 means error, 2 means plugin disabled
+     * @return int -1 means error, otherwise returns a count of changes
      */
     public function sync($courseid, $instances) {
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
-            return 2;
+            return -1;
         }
 
         // Unfortunately this may take a long time, execution can be interrupted safely here.
@@ -219,6 +219,9 @@ class enrol_connect_plugin extends enrol_plugin
             $map[$userid][$record->id] = $record;
         }
         unset($users);
+
+        // Count changes.
+        $changes = 0;
 
         // Now, we start the enrolments.
         foreach ($instances as $instance) {
@@ -259,6 +262,7 @@ class enrol_connect_plugin extends enrol_plugin
                 // If we are not enrolled, enrol us.
                 if (!$ue) {
                     $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
+                    $changes++;
                 }
             }
         }
@@ -267,9 +271,10 @@ class enrol_connect_plugin extends enrol_plugin
         foreach ($map as $userid => $instances) {
             foreach ($instances as $instance) {
                 $this->unenrol_user($instance, $userid);
+                $changes++;
             }
         }
 
-        return 0;
+        return $changes;
     }
 }
