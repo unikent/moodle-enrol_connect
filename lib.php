@@ -182,7 +182,6 @@ class enrol_connect_plugin extends enrol_plugin
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
-            $trace->finished();
             return 2;
         }
 
