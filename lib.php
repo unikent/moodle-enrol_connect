@@ -143,16 +143,17 @@ class enrol_connect_plugin extends enrol_plugin
     public function cron() {
         global $DB;
 
+        // Unfortunately this may take a long time, execution can be interrupted safely here.
+        core_php_time_limit::raise();
+        raise_memory_limit(MEMORY_HUGE);
+
         $trace = new text_progress_trace();
         $trace->output("Synchronizing Connect Enrolments...");
 
         $instances = array();
 
         if (true) {
-            $rs = $DB->get_recordset_sql('SELECT *
-                FROM {enrol}
-                WHERE enrol=:enrol AND status=:status
-            ', array(
+            $rs = $DB->get_recordset('enrol', array(
                 'enrol' => 'connect',
                 'status' => ENROL_INSTANCE_ENABLED
             ));
@@ -179,19 +180,14 @@ class enrol_connect_plugin extends enrol_plugin
     /**
      * Sync all meta course links.
      *
-     * @return int 0 means ok, 1 means error, 2 means plugin disabled
+     * @return int -1 means error, otherwise returns a count of changes
      */
     public function sync($courseid, $instances) {
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
-            $trace->finished();
-            return 2;
+            return -1;
         }
-
-        // Unfortunately this may take a long time, execution can be interrupted safely here.
-        core_php_time_limit::raise();
-        raise_memory_limit(MEMORY_HUGE);
 
         $ctx = \context_course::instance($courseid, MUST_EXIST);
 
@@ -200,7 +196,7 @@ class enrol_connect_plugin extends enrol_plugin
         // from this list and then delete anything that's left after.
         // Seems to be the most efficient way of doing this, though
         // it probably isn't very readable (hence the massive comment).
-        $records = $DB->get_records_sql('SELECT e.*, ue.userid FROM {user_enrolments} ue
+        $records = $DB->get_records_sql('SELECT ue.id AS ueid, e.*, ue.userid FROM {user_enrolments} ue
             INNER JOIN {enrol} e ON e.id = ue.enrolid
             WHERE e.enrol=:enrolid AND e.status=:status AND e.courseid=:courseid
             GROUP BY ue.userid, e.id
@@ -220,9 +216,13 @@ class enrol_connect_plugin extends enrol_plugin
             }
 
             unset($record->userid);
+            unset($record->ueid);
             $map[$userid][$record->id] = $record;
         }
         unset($users);
+
+        // Count changes.
+        $changes = 0;
 
         // Now, we start the enrolments.
         foreach ($instances as $instance) {
@@ -263,6 +263,7 @@ class enrol_connect_plugin extends enrol_plugin
                 // If we are not enrolled, enrol us.
                 if (!$ue) {
                     $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
+                    $changes++;
                 }
             }
         }
@@ -271,9 +272,10 @@ class enrol_connect_plugin extends enrol_plugin
         foreach ($map as $userid => $instances) {
             foreach ($instances as $instance) {
                 $this->unenrol_user($instance, $userid);
+                $changes++;
             }
         }
 
-        return 0;
+        return $changes;
     }
 }
