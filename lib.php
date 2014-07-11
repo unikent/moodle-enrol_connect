@@ -149,10 +149,7 @@ class enrol_connect_plugin extends enrol_plugin
         $instances = array();
 
         if (true) {
-            $rs = $DB->get_recordset_sql('SELECT *
-                FROM {enrol}
-                WHERE enrol=:enrol AND status=:status
-            ', array(
+            $rs = $DB->get_recordset('enrol', array(
                 'enrol' => 'connect',
                 'status' => ENROL_INSTANCE_ENABLED
             ));
