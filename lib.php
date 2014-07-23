@@ -29,6 +29,16 @@ class enrol_connect_plugin extends enrol_plugin
 {
 
     /**
+     * Returns localised name of enrol instance
+     *
+     * @param object $instance (null is accepted too)
+     * @return string
+     */
+    public function get_instance_name($instance) {
+        return "SDS (Connect ID: " . s($instance->customint1) . ")";
+    }
+
+    /**
      * Does this plugin assign protected roles are can they be manually removed?
      * @return bool - false means anybody may tweak roles, it does not use itemid and component when assigning roles
      */
