@@ -255,13 +255,12 @@ class enrol_connect_plugin extends enrol_plugin
                 $user = $enrolment->user;
                 $role = $enrolment->role;
 
-                // Try to create the user.
+                // Try to create the user if it does not exist.
                 if (!$user->is_in_moodle()) {
                     $user->create_in_moodle();
                 }
 
-                // Check these things are in Moodle,
-                // skip if not (this plugin does not create new users/roles).
+                // Check these things are in Moodle.
                 if (empty($user->mid) || empty($role->mid)) {
                     continue;
                 }
