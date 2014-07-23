@@ -29,6 +29,16 @@ class enrol_connect_plugin extends enrol_plugin
 {
 
     /**
+     * Returns localised name of enrol instance
+     *
+     * @param object $instance (null is accepted too)
+     * @return string
+     */
+    public function get_instance_name($instance) {
+        return "SDS (Connect ID: " . s($instance->customint1) . ")";
+    }
+
+    /**
      * Does this plugin assign protected roles are can they be manually removed?
      * @return bool - false means anybody may tweak roles, it does not use itemid and component when assigning roles
      */
@@ -245,8 +255,12 @@ class enrol_connect_plugin extends enrol_plugin
                 $user = $enrolment->user;
                 $role = $enrolment->role;
 
-                // Check these things are in Moodle,
-                // skip if not (this plugin does not create new users/roles).
+                // Try to create the user if it does not exist.
+                if (!$user->is_in_moodle()) {
+                    $user->create_in_moodle();
+                }
+
+                // Check these things are in Moodle.
                 if (empty($user->mid) || empty($role->mid)) {
                     continue;
                 }
