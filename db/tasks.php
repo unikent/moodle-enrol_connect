@@ -14,21 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Connect enrolment plugin version specification.
- *
- * @package    enrol_connect
- * @copyright  2014 University of Kent
- * @author     Skylar Kelty
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->version   = 2014080500;        // The current plugin version (Date: YYYYMMDDXX).
-$plugin->requires  = 2014050800;        // Requires this Moodle version.
-$plugin->component = 'enrol_connect';   // Full name of the plugin (used for diagnostics).
-
-$plugin->dependencies = array(
-    'local_connect' => 2014070400
+$tasks = array(
+    array(
+        'classname' => 'enrol_connect\task\sync',
+        'blocking' => 0,
+        'minute' => '0',
+        'hour' => '*/4',
+        'day' => '*',
+        'dayofweek' => '1-5',
+        'month' => '*'
+    )
 );
