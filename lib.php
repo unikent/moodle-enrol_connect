@@ -147,47 +147,6 @@ class enrol_connect_plugin extends enrol_plugin
     }
 
     /**
-     * Enrol cron support.
-     * @return void
-     */
-    public function cron() {
-        global $DB;
-
-        // Unfortunately this may take a long time, execution can be interrupted safely here.
-        core_php_time_limit::raise();
-        raise_memory_limit(MEMORY_HUGE);
-
-        $trace = new text_progress_trace();
-        $trace->output("Synchronizing Connect Enrolments...");
-
-        $instances = array();
-
-        if (true) {
-            $rs = $DB->get_recordset('enrol', array(
-                'enrol' => 'connect',
-                'status' => ENROL_INSTANCE_ENABLED
-            ));
-
-            foreach ($rs as $record) {
-                if (!isset($instances[$record->courseid])) {
-                    $instances[$record->courseid] = array();
-                }
-
-                $instances[$record->courseid][] = $record;
-            }
-
-            $rs->close();
-        }
-
-        foreach ($instances as $course => $set) {
-            $this->sync($course, $set);
-        }
-
-        $trace->output('...connect enrolment updates finished.');
-        $trace->finished();
-    }
-
-    /**
      * Sync all meta course links.
      *
      * @return int -1 means error, otherwise returns a count of changes
