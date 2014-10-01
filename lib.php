@@ -152,7 +152,8 @@ class enrol_connect_plugin extends enrol_plugin
      * @return int -1 means error, otherwise returns a count of changes
      */
     public function sync($courseid, $instances) {
-        // TODO
+        $context = \context_course::instance($courseid, MUST_EXIST);
+        $this->sync_bulk($context, $courseid, $instances);
     }
 
     /**
@@ -160,7 +161,7 @@ class enrol_connect_plugin extends enrol_plugin
      *
      * @return int -1 means error, otherwise returns a count of changes
      */
-    public function sync_bulk($context, $courseid, $instances, $map, $roles) {
+    public function sync_bulk($context, $courseid, $instances, $map = array(), $roles = array()) {
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
@@ -202,40 +203,47 @@ class enrol_connect_plugin extends enrol_plugin
                 }
 
                 // Are we already enrolled?
-                $enrolled = isset($map[$user->mid][$instance->id]);
-
-                // Unset the username regardless of what happens.
-                unset($map[$user->mid][$instance->id]);
+                $enrolled = isset($map[$user->mid]) && isset($map[$user->mid][$instance->id]);
 
                 // If we are not enrolled, enrol us.
                 if (!$enrolled) {
                     $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
                     $changes++;
                 } else {
-                    // Check the role is okay.
-                    $assign = true;
-                    foreach ($roles[$user->mid] as $k => $roleid) {
-                        if ($roleid == $role->mid) {
-                            $assign = false;
-                        } else {
-                            role_unassign($roleid, $user->mid, $context->id, 'enrol_connect', $instance->id);
-                            $changes++;
-                        }
+                    // Unset it.
+                    unset($map[$user->mid][$instance->id]);
+                    if (empty($map[$user->mid])) {
+                        unset($map[$user->mid]);
                     }
 
-                    if ($assign) {
-                        role_assign($role->mid, $user->mid, $context->id, 'enrol_connect', $instance->id);
-                        $changes++;
+                    // Check the role is okay.
+                    if (isset($roles[$user->mid])) {
+                        $assign = true;
+                        foreach ($roles[$user->mid] as $k => $roleid) {
+                            if ($roleid == $role->mid) {
+                                $assign = false;
+                            } else {
+                                role_unassign($roleid, $user->mid, $context->id, 'enrol_connect', $instance->id);
+                                $changes++;
+                            }
+                        }
+
+                        if ($assign) {
+                            role_assign($role->mid, $user->mid, $context->id, 'enrol_connect', $instance->id);
+                            $changes++;
+                        }
                     }
                 }
             }
         }
 
         // Right! The leftovers are to be removed.
-        foreach ($map as $userid => $instances) {
-            foreach ($instances as $enrolid => $instance) {
-                $this->unenrol_user($instance, $userid);
-                $changes++;
+        if (!empty($map)) {
+            foreach ($map as $userid => $instances) {
+                foreach ($instances as $enrolid => $instance) {
+                    $this->unenrol_user($instance, $userid);
+                    $changes++;
+                }
             }
         }
 
