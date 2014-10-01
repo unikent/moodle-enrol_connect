@@ -37,6 +37,23 @@ class sync extends \core\task\scheduled_task
         \core_php_time_limit::raise();
         raise_memory_limit(MEMORY_HUGE);
 
+        // First, get a list of all instances by course ID.
+        $instances = $this->get_enrol_instances();
+
+        // Now, get a list of enrolments for each course.
+        $enrolments = $this->get_enrolments($instances);
+
+        foreach ($instances as $course => $set) {
+            $enrol->sync($course, $set, $enrolments[$course]);
+        }
+    }
+
+    /**
+     * Returns a list of all enrol instances by course ID.
+     */
+    private function get_enrol_instances() {
+        global $DB;
+
         $instances = array();
 
         $rs = $DB->get_recordset('enrol', array(
@@ -55,8 +72,45 @@ class sync extends \core\task\scheduled_task
         $rs->close();
         unset($rs);
 
-        foreach ($instances as $course => $set) {
-            $enrol->sync($course, $set);
+        return $instances;
+    }
+
+    /**
+     * Get a list of all enrolments by course ID.
+     */
+    private function get_enrolments($instances) {
+        global $DB;
+
+        $enrolments = array();
+
+        $rs = $DB->get_recordset_sql("
+            SELECT ue.id, ue.userid, e.courseid, ue.enrolid
+            FROM {user_enrolments} ue
+            INNER JOIN {enrol} e
+                ON e.id = ue.enrolid
+            WHERE e.enrol=:enrol AND e.status=:status
+        ", array(
+            'enrol' => 'connect',
+            'status' => ENROL_INSTANCE_ENABLED
+        ));
+
+        foreach ($rs as $record) {
+            if (!isset($enrolments[$record->courseid])) {
+                $enrolments[$record->courseid] = array();
+            }
+
+            if (!isset($enrolments[$record->courseid][$record->userid])) {
+                $enrolments[$record->courseid][$record->userid] = array();
+            }
+
+            foreach ($instances[$record->courseid] as $k => $v) {
+                $enrolments[$record->courseid][$record->userid][$v->id] = $v;
+            }
         }
+
+        $rs->close();
+        unset($rs);
+
+        return $enrolments;
     }
 }

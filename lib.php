@@ -151,7 +151,7 @@ class enrol_connect_plugin extends enrol_plugin
      *
      * @return int -1 means error, otherwise returns a count of changes
      */
-    public function sync($courseid, $instances) {
+    public function sync($courseid, $instances, $map) {
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
@@ -159,36 +159,6 @@ class enrol_connect_plugin extends enrol_plugin
         }
 
         $ctx = \context_course::instance($courseid, MUST_EXIST);
-
-        // Let's build a giant list of enrolments we already have.
-        // As we go through each set we will kill off enrolments
-        // from this list and then delete anything that's left after.
-        // Seems to be the most efficient way of doing this, though
-        // it probably isn't very readable (hence the massive comment).
-        $records = $DB->get_records_sql('SELECT ue.id AS ueid, e.*, ue.userid FROM {user_enrolments} ue
-            INNER JOIN {enrol} e ON e.id = ue.enrolid
-            WHERE e.enrol=:enrolid AND e.status=:status AND e.courseid=:courseid
-            GROUP BY ue.userid, e.id
-        ', array(
-            'courseid' => $courseid,
-            'enrolid' => 'connect',
-            'status' => ENROL_INSTANCE_ENABLED
-        ));
-
-        // Map user IDs to instances.
-        $map = array();
-        foreach ($records as $record) {
-            $userid = $record->userid;
-
-            if (!isset($map[$userid])) {
-                $map[$userid] = array();
-            }
-
-            unset($record->userid);
-            unset($record->ueid);
-            $map[$userid][$record->id] = $record;
-        }
-        unset($users);
 
         // Count changes.
         $changes = 0;
@@ -224,26 +194,26 @@ class enrol_connect_plugin extends enrol_plugin
                     continue;
                 }
 
+                // Are we already enrolled?
+                $enroled = isset($map[$user->mid][$instance->id]);
+
                 // Unset the username regardless of what happens.
                 unset($map[$user->mid][$instance->id]);
 
-                // Are we already enrolled?
-                $ue = $DB->record_exists('user_enrolments', array(
-                    'enrolid' => $instance->id,
-                    'userid' => $user->mid
-                ));
-
                 // If we are not enrolled, enrol us.
-                if (!$ue) {
+                if (!$enroled) {
                     $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
                     $changes++;
+                } else {
+                    // Check the role is okay.
+                    //role_assign($roleid, $userid, $context->id, 'enrol_'.$name, $instance->id);
                 }
             }
         }
 
         // Right! The leftovers are to be removed.
         foreach ($map as $userid => $instances) {
-            foreach ($instances as $instance) {
+            foreach ($instances as $enrolid => $instance) {
                 $this->unenrol_user($instance, $userid);
                 $changes++;
             }
