@@ -43,9 +43,16 @@ class sync extends \core\task\scheduled_task
         // Now, get a list of enrolments for each course.
         $enrolments = $this->get_enrolments($instances);
 
+        // And get all the roles.
+        $roles = $this->get_roles();
+
+        $changes = 0;
         foreach ($instances as $course => $set) {
-            $enrol->sync($course, $set, $enrolments[$course]);
+            $ctx = \context_course::instance($course, MUST_EXIST);
+            $changes += $enrol->sync_bulk($ctx, $course, $set, $enrolments[$course], $roles[$ctx]);
         }
+
+        echo "Complete with {$changes} changes!\n";
     }
 
     /**
@@ -85,7 +92,7 @@ class sync extends \core\task\scheduled_task
 
         $rs = $DB->get_recordset_sql("
             SELECT ue.id, ue.userid, e.courseid, ue.enrolid
-            FROM {user_enrolments} ue
+                FROM {user_enrolments} ue
             INNER JOIN {enrol} e
                 ON e.id = ue.enrolid
             WHERE e.enrol=:enrol AND e.status=:status
@@ -112,5 +119,48 @@ class sync extends \core\task\scheduled_task
         unset($rs);
 
         return $enrolments;
+    }
+
+    /**
+     * Returns a list of roles.
+     */
+    private function get_roles() {
+        global $DB;
+
+        $roles = array();
+
+        $rs = $DB->get_recordset_sql("
+            SELECT ra.id, ra.contextid, ra.userid, ra.roleid
+                FROM {role_assignments} ra
+            INNER JOIN {context} ctx
+                ON ctx.id=ra.contextid
+            INNER JOIN {role} r
+                ON r.id=ra.roleid
+            WHERE
+                ctx.contextlevel=:level
+                AND r.shortname IN (:ss, :st, :sc)
+        ", array(
+            "level" => \CONTEXT_COURSE,
+            "ss" => "sds_student",
+            "st" => "sds_teacher",
+            "sc" => "sds_convenor",
+        ));
+
+        foreach ($rs as $record) {
+            if (!isset($roles[$record->contextid])) {
+                $roles[$record->contextid] = array();
+            }
+
+            if (!isset($roles[$record->contextid][$record->userid])) {
+                $roles[$record->contextid][$record->userid] = array();
+            }
+
+            $roles[$record->contextid][$record->userid][] = $record->roleid;
+        }
+
+        $rs->close();
+        unset($rs);
+
+        return $roles;
     }
 }

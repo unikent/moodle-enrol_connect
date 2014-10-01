@@ -151,14 +151,21 @@ class enrol_connect_plugin extends enrol_plugin
      *
      * @return int -1 means error, otherwise returns a count of changes
      */
-    public function sync($courseid, $instances, $map) {
+    public function sync($courseid, $instances) {
+        // TODO
+    }
+
+    /**
+     * Sync all meta course links.
+     *
+     * @return int -1 means error, otherwise returns a count of changes
+     */
+    public function sync_bulk($context, $courseid, $instances, $map, $roles) {
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
             return -1;
         }
-
-        $ctx = \context_course::instance($courseid, MUST_EXIST);
 
         // Count changes.
         $changes = 0;
@@ -206,7 +213,19 @@ class enrol_connect_plugin extends enrol_plugin
                     $changes++;
                 } else {
                     // Check the role is okay.
-                    //role_assign($roleid, $userid, $context->id, 'enrol_'.$name, $instance->id);
+                    $assign = true;
+                    foreach ($roles[$user->mid] as $k => $roleid) {
+                        if ($roleid == $role->mid) {
+                            $assign = false;
+                        } else {
+                            role_unassign($roleid, $user->mid, $context);
+                        }
+                    }
+
+                    if ($assign) {
+                        role_assign($role->mid, $user->mid, $context->id, 'enrol_connect', $instance->id);
+                        $changes++;
+                    }
                 }
             }
         }
