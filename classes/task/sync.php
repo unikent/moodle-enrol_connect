@@ -49,7 +49,18 @@ class sync extends \core\task\scheduled_task
         $changes = 0;
         foreach ($instances as $course => $set) {
             $ctx = \context_course::instance($course, MUST_EXIST);
-            $changes += $enrol->sync_bulk($ctx, $course, $set, $enrolments[$course], $roles[$ctx]);
+
+            $cenrolments = array();
+            if (isset($enrolments[$course])) {
+                $cenrolments = $enrolments[$course];
+            }
+
+            $croles = array();
+            if (isset($roles[$ctx->id])) {
+                $croles = $roles[$ctx->id];
+            }
+
+            $changes += $enrol->sync_bulk($ctx, $course, $set, $cenrolments, $croles);
         }
 
         echo "Complete with {$changes} changes!\n";

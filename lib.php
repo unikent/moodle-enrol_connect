@@ -164,7 +164,7 @@ class enrol_connect_plugin extends enrol_plugin
         global $DB;
 
         if (!enrol_is_enabled('connect')) {
-            return -1;
+            return 0;
         }
 
         // Count changes.
@@ -218,7 +218,8 @@ class enrol_connect_plugin extends enrol_plugin
                         if ($roleid == $role->mid) {
                             $assign = false;
                         } else {
-                            role_unassign($roleid, $user->mid, $context);
+                            role_unassign($roleid, $user->mid, $context->id, 'enrol_connect', $instance->id);
+                            $changes++;
                         }
                     }
 
