@@ -202,13 +202,13 @@ class enrol_connect_plugin extends enrol_plugin
                 }
 
                 // Are we already enrolled?
-                $enroled = isset($map[$user->mid][$instance->id]);
+                $enrolled = isset($map[$user->mid][$instance->id]);
 
                 // Unset the username regardless of what happens.
                 unset($map[$user->mid][$instance->id]);
 
                 // If we are not enrolled, enrol us.
-                if (!$enroled) {
+                if (!$enrolled) {
                     $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
                     $changes++;
                 } else {
