@@ -94,8 +94,10 @@ class helpers
                 $enrolments[$record->courseid][$record->userid] = array();
             }
 
-            foreach ($instances[$record->courseid] as $k => $v) {
-                $enrolments[$record->courseid][$record->userid][$v->id] = $v;
+            if (isset($instances[$record->courseid])) {
+                foreach ($instances[$record->courseid] as $k => $v) {
+                    $enrolments[$record->courseid][$record->userid][$v->id] = $v;
+                }
             }
         }
 
