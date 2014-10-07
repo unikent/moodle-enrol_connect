@@ -153,7 +153,14 @@ class enrol_connect_plugin extends enrol_plugin
      */
     public function sync($courseid, $instances) {
         $context = \context_course::instance($courseid, MUST_EXIST);
-        $this->sync_bulk($context, $courseid, $instances);
+        $enrolments = \enrol_connect\task\helpers::get_enrolments($instances, $courseid);
+        if (isset($enrolments[$courseid])) {
+            $enrolments = $enrolments[$courseid];
+        } else {
+            $enrolments = array();
+        }
+
+        $this->sync_bulk($context, $courseid, $instances, $enrolments, array());
     }
 
     /**
@@ -239,8 +246,8 @@ class enrol_connect_plugin extends enrol_plugin
 
         // Right! The leftovers are to be removed.
         if (!empty($map)) {
-            foreach ($map as $userid => $instances) {
-                foreach ($instances as $enrolid => $instance) {
+            foreach ($map as $userid => $uinstances) {
+                foreach ($uinstances as $enrolid => $instance) {
                     $this->unenrol_user($instance, $userid);
                     $changes++;
                 }
