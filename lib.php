@@ -153,7 +153,14 @@ class enrol_connect_plugin extends enrol_plugin
      */
     public function sync($courseid, $instances) {
         $context = \context_course::instance($courseid, MUST_EXIST);
-        $this->sync_bulk($context, $courseid, $instances);
+        $enrolments = \enrol_connect\task\helpers::get_enrolments($instances, $courseid);
+        if (isset($enrolments[$courseid])) {
+            $enrolments = $enrolments[$courseid];
+        } else {
+            $enrolments = array();
+        }
+
+        $this->sync_bulk($context, $courseid, $instances, $enrolments, array());
     }
 
     /**
@@ -203,7 +210,16 @@ class enrol_connect_plugin extends enrol_plugin
                 }
 
                 // Are we already enrolled?
-                $enrolled = isset($map[$user->mid]) && isset($map[$user->mid][$instance->id]);
+                $enrolled = false;
+                if (isset($map[$user->mid])) {
+                    if ($map[$user->mid] === true) {
+                        continue;
+                    }
+
+                    if (isset($map[$user->mid][$instance->id])) {
+                        $enrolled = true;
+                    }
+                }
 
                 // If we are not enrolled, enrol us.
                 if (!$enrolled) {
@@ -211,10 +227,7 @@ class enrol_connect_plugin extends enrol_plugin
                     $changes++;
                 } else {
                     // Unset it.
-                    unset($map[$user->mid][$instance->id]);
-                    if (empty($map[$user->mid])) {
-                        unset($map[$user->mid]);
-                    }
+                    $map[$user->mid] = true;
 
                     // Check the role is okay.
                     if (isset($roles[$user->mid])) {
@@ -239,10 +252,12 @@ class enrol_connect_plugin extends enrol_plugin
 
         // Right! The leftovers are to be removed.
         if (!empty($map)) {
-            foreach ($map as $userid => $instances) {
-                foreach ($instances as $enrolid => $instance) {
-                    $this->unenrol_user($instance, $userid);
-                    $changes++;
+            foreach ($map as $userid => $uinstances) {
+                if (is_array($uinstances)) {
+                    foreach ($uinstances as $enrolid => $instance) {
+                        $this->unenrol_user($instance, $userid);
+                        $changes++;
+                    }
                 }
             }
         }
