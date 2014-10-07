@@ -127,7 +127,7 @@ class helpers
             "level" => \CONTEXT_COURSE,
             "ss" => "sds_student",
             "st" => "sds_teacher",
-            "sc" => "sds_convenor",
+            "sc" => "sds_convenor"
         ));
 
         foreach ($rs as $record) {
