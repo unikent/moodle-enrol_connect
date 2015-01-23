@@ -18,10 +18,10 @@ $tasks = array(
     array(
         'classname' => 'enrol_connect\task\sync',
         'blocking' => 0,
-        'minute' => '0',
+        'minute' => '45',
         'hour' => '*/4',
         'day' => '*',
-        'dayofweek' => '1-5',
+        'dayofweek' => '*',
         'month' => '*'
     )
 );
