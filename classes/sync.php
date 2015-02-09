@@ -27,13 +27,62 @@ class sync
     public function run() {
         global $DB;
 
-        $info = $this->get_current_info();
+        $currentinfo = $this->get_current_info();
+        $latestinfo = $this->get_latest_info();
 
-        print_r($info);
+        print_r($latestinfo);
     }
 
     /**
-     * Munge enrols and roles lists.
+     * Grab the latest info.
+     */
+    private function get_latest_info() {
+        $info = array();
+
+        $latestroles = $this->get_latest_roles();
+        foreach ($latestroles as $role) {
+            if (!isset($info[$role->courseid])) {
+                $info[$role->courseid] = array();
+            }
+
+            $infoblock = new \stdClass();
+            if (isset($info[$role->courseid][$role->username])) {
+                $infoblock = $info[$role->courseid][$role->username];
+            }
+
+            $infoblock->roles = explode(',', $role->roles);
+
+            $info[$role->courseid][$role->username] = $infoblock;
+        }
+        unset($latestroles);
+
+        return $info;
+    }
+
+    /**
+     * Return a list of everyones roles in all courses.
+     */
+    private function get_latest_roles() {
+        global $DB;
+
+        $sql = <<<SQL
+            SELECT ce.id, cu.login as username, cc.mid as courseid, GROUP_CONCAT(cr.name) as roles
+            FROM {connect_enrolments} ce
+            INNER JOIN {connect_user} cu
+                ON cu.id=ce.userid
+            INNER JOIN {connect_course} cc
+                ON cc.id=ce.courseid
+            INNER JOIN {connect_role} cr
+                ON cr.id=ce.roleid
+            WHERE cc.mid > 0
+            GROUP BY cu.login, cc.mid
+SQL;
+        
+        return $DB->get_records_sql($sql);
+    }
+
+    /**
+     * Merge enrols and roles lists.
      */
     private function get_current_info() {
         $info = array();
@@ -83,7 +132,6 @@ class sync
 
         $sql = <<<SQL
             SELECT ra.id, u.username, ctx.instanceid as courseid, GROUP_CONCAT(r.shortname) as roles
-
             FROM {role_assignments} ra
             INNER JOIN {role} r
                 ON r.id=ra.roleid
@@ -91,7 +139,6 @@ class sync
                 ON u.id=ra.userid
             INNER JOIN {context} ctx
                 ON ctx.id=ra.contextid AND ctx.contextlevel=50
-
             GROUP BY u.username, ctx.instanceid
 SQL;
 
@@ -106,7 +153,6 @@ SQL;
 
         $sql = <<<SQL
             SELECT ue.id, u.username, e.courseid, GROUP_CONCAT(e.enrol) as enrols
-
             FROM {user_enrolments} ue
             INNER JOIN {enrol} e
                 ON e.id=ue.enrolid
@@ -114,9 +160,7 @@ SQL;
                 ON u.id=ue.userid
             INNER JOIN {context} ctx
                 ON ctx.instanceid=e.courseid AND ctx.contextlevel=50
-
             WHERE e.enrol='manual' OR e.enrol='connect'
-
             GROUP BY u.username, e.courseid
 SQL;
 
