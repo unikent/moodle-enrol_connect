@@ -25,12 +25,35 @@ class sync
      * Run a global sync.
      */
     public function run() {
-        global $DB;
-
         $currentinfo = $this->get_current_info();
         $latestinfo = $this->get_latest_info();
 
-        print_r($latestinfo);
+        $this->sync_role_changes($currentinfo, $latestinfo);
+    }
+
+    /**
+     * Changes roles.
+     */
+    private function sync_role_changes($currentinfo, $latestinfo) {
+        // Return all roles that are in currentinfo and not latestinfo.
+        foreach ($currentinfo as $course => $users) {
+            if (!isset($latestinfo[$course])) {
+                continue;
+            }
+
+            foreach ($users as $username => $user) {
+                if (!isset($latestinfo[$course][$username])) {
+                    continue;
+                }
+
+                $latest = $latestinfo[$course][$username];
+                foreach ($user->roles as $role) {
+                    if (!in_array($role, $latest->roles)) {
+                        echo " Removing role '{$role}' from user '{$username}' in course '{$course}'..\n";
+                    }
+                }
+            }
+        }
     }
 
     /**
