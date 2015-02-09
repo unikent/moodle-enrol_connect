@@ -66,16 +66,15 @@ class sync
         global $DB;
 
         $sql = <<<SQL
-            SELECT ce.id, cu.login as username, cc.mid as courseid, GROUP_CONCAT(cr.name) as roles
+            SELECT ce.id, cu.login as username, e.courseid, GROUP_CONCAT(cr.name) as roles
             FROM {connect_enrolments} ce
+            INNER JOIN {enrol} e
+                ON e.customint1=ce.courseid
             INNER JOIN {connect_user} cu
                 ON cu.id=ce.userid
-            INNER JOIN {connect_course} cc
-                ON cc.id=ce.courseid
             INNER JOIN {connect_role} cr
                 ON cr.id=ce.roleid
-            WHERE cc.mid > 0
-            GROUP BY cu.login, cc.mid
+            GROUP BY cu.login, e.courseid
 SQL;
         
         return $DB->get_records_sql($sql);
