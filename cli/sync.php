@@ -37,5 +37,5 @@ if (!enrol_is_enabled('connect')) {
     cli_error('enrol_connect plugin is disabled, synchronisation stopped', 2);
 }
 
-$sync = new \enrol_connect\sync();
-$sync->run();
+$plugin = enrol_get_plugin('connect');
+$plugin->global_sync();

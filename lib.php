@@ -158,121 +158,219 @@ class enrol_connect_plugin extends enrol_plugin
     }
 
     /**
-     * Sync all meta course links.
-     *
-     * @return int -1 means error, otherwise returns a count of changes
+     * Returns a list of all enrol instances by ID.
      */
-    public function sync($courseid, $instances) {
-        $context = \context_course::instance($courseid, MUST_EXIST);
-        $enrolments = \enrol_connect\task\helpers::get_enrolments($instances, $courseid);
-        if (isset($enrolments[$courseid])) {
-            $enrolments = $enrolments[$courseid];
-        } else {
-            $enrolments = array();
-        }
+    private function get_enrol_instances() {
+        global $DB;
 
-        $this->sync_bulk($context, $courseid, $instances, $enrolments, array());
+        return $DB->get_records_sql('SELECT * FROM {enrol} WHERE enrol IN (:enrol1, :enrol2)', array(
+            'enrol1' => 'connect',
+            'enrol2' => 'manual',
+            'status' => ENROL_INSTANCE_ENABLED
+        ));
     }
 
     /**
-     * Sync all meta course links.
-     *
-     * @return int -1 means error, otherwise returns a count of changes
+     * Run a global sync.
      */
-    public function sync_bulk($context, $courseid, $instances, $map = array(), $roles = array()) {
-        global $DB;
+    public function global_sync() {
+        $manualplugin = enrol_get_plugin('manual');
 
-        if (!enrol_is_enabled('connect')) {
-            return 0;
-        }
+        $enrolinstances = $this->get_enrol_instances();
+        $currentinfo = $this->get_current_info();
+        $latestinfo = $this->get_latest_info();
 
-        // Count changes.
-        $changes = 0;
-
-        // Now, we start the enrolments.
-        foreach ($instances as $instance) {
-            // Get all enrolments for this instance.
-            $enrolments = array();
-            if ($instance->customint1 > 0) {
-                $enrolments = \local_connect\enrolment::get_by("courseid", $instance->customint1, true);
-            } else {
-                // This is a default instance.
-                // Get all enrolments for everything that has this course for a mid.
-                $courses = \local_connect\course::get_by('mid', $courseid, true);
-                foreach ($courses as $course) {
-                    $ce = \local_connect\enrolment::get_by("courseid", $course->id, true);
-                    $enrolments = array_merge($enrolments, $ce);
-                }
+        // New enrols.
+        foreach ($latestinfo as $course => $users) {
+            if (!isset($currentinfo[$course])) {
+                continue;
             }
 
-            // Go through and add everything that needs adding.
-            foreach ($enrolments as $enrolment) {
-                $user = $enrolment->user;
-                $role = $enrolment->role;
-
-                // Try to create the user if it does not exist.
-                if (!$user->is_in_moodle()) {
-                    $user->create_in_moodle();
+            foreach ($users as $username => $user) {
+                if (!isset($currentinfo[$course][$username])) {
+                    echo "   Adding user '{$username}' to course '{$course}'..\n";
+                    $instance = $enrolinstances[$user->enrolid];
+                    $this->enrol_user($instance, $user->mid, $user->role, 0, 0);
+                    continue;
                 }
+            }
+        }
+        
+        foreach ($currentinfo as $course => $users) {
+            if (!isset($latestinfo[$course])) {
+                continue;
+            }
 
-                // Check these things are in Moodle.
-                if (empty($user->mid) || empty($role->mid)) {
+            $context = \context_course::instance($course);
+
+            foreach ($users as $username => $user) {
+                if (!isset($latestinfo[$course][$username])) {
+                    foreach ($user->enrols as $enrolid => $enrolname) {
+                        echo "   Removing user '{$username}' from course '{$course}' ('{$enrolname}' plugin)..\n";
+                        $instance = $enrolinstances[$enrolid];
+                        $plugin = $enrolname == 'manual' ? $manualplugin : $this;
+                        $plugin->unenrol_user($instance, $user->userid);
+                    }
                     continue;
                 }
 
-                // Are we already enrolled?
-                $enrolled = false;
-                if (isset($map[$user->mid])) {
-                    if ($map[$user->mid] === true) {
-                        continue;
-                    }
+                $latest = $latestinfo[$course][$username];
 
-                    if (isset($map[$user->mid][$instance->id])) {
-                        $enrolled = true;
-                    }
+                // Add new roles.
+                if (!isset($user->roles[$latest->role])) {
+                    echo "   Adding role '{$latest->role}' to user '{$username}' in course '{$course}'..\n";
+                    $instance = $enrolinstances[$latest->enrol];
+                    role_assign($latest->role, $user->userid, $context->id, 'enrol_connect', $instance->id);
                 }
 
-                // If we are not enrolled, enrol us.
-                if (!$enrolled) {
-                    $this->enrol_user($instance, $user->mid, $role->mid, 0, 0);
-                    $changes++;
-                } else {
-                    // Unset it.
-                    $map[$user->mid] = true;
-
-                    // Check the role is okay.
-                    if (isset($roles[$user->mid])) {
-                        $assign = true;
-                        foreach ($roles[$user->mid] as $k => $roleid) {
-                            if ($roleid == $role->mid) {
-                                $assign = false;
-                            } else {
-                                role_unassign($roleid, $user->mid, $context->id, 'enrol_connect', $instance->id);
-                                $changes++;
-                            }
-                        }
-
-                        if ($assign) {
-                            role_assign($role->mid, $user->mid, $context->id, 'enrol_connect', $instance->id);
-                            $changes++;
-                        }
+                // Remove old roles
+                foreach ($user->roles as $roleid => $name) {
+                    if ($roleid != $latest->role) {
+                        echo "   Removing role '{$name}' from user '{$username}' in course '{$course}'..\n";
+                        $instance = $enrolinstances[$latest->enrol];
+                        role_unassign($roleid, $user->userid, $context->id, 'enrol_connect', $instance->id);
                     }
                 }
             }
         }
+    }
 
-        // Right! The leftovers are to be removed.
-        if (!empty($map)) {
-            foreach ($map as $userid => $uinstances) {
-                if (is_array($uinstances)) {
-                    foreach ($uinstances as $enrolid => $instance) {
-                        $this->unenrol_user($instance, $userid);
-                        $changes++;
-                    }
-                }
+    /**
+     * Grab the latest info.
+     */
+    private function get_latest_info() {
+        $info = array();
+
+        $latestroles = $this->get_latest_roles();
+        foreach ($latestroles as $role) {
+            if (!isset($info[$role->courseid])) {
+                $info[$role->courseid] = array();
             }
-        }
 
-        return $changes;
+            $infoblock = new \stdClass();
+
+            if (isset($info[$role->courseid][$role->username])) {
+                $infoblock = $info[$role->courseid][$role->username];
+            }
+
+            $infoblock->mid = $role->mid;
+            $infoblock->enrol = $role->enrolid;
+            $infoblock->role = $role->rolemid;
+
+            $info[$role->courseid][$role->username] = $infoblock;
+        }
+        unset($latestroles);
+
+        return $info;
+    }
+
+    /**
+     * Return a list of everyones roles in all courses.
+     */
+    private function get_latest_roles() {
+        global $DB;
+
+        $sql = <<<SQL
+            SELECT ce.id, cu.login as username, cu.mid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
+            FROM {connect_enrolments} ce
+            INNER JOIN {enrol} e
+                ON e.customint1=ce.courseid AND e.enrol='connect'
+            INNER JOIN {connect_user} cu
+                ON cu.id=ce.userid
+            INNER JOIN {connect_role} cr
+                ON cr.id=ce.roleid
+SQL;
+        
+        return $DB->get_records_sql($sql);
+    }
+
+    /**
+     * Merge enrols and roles lists.
+     */
+    private function get_current_info() {
+        $info = array();
+
+        $currentroles = $this->get_current_roles();
+        foreach ($currentroles as $role) {
+            if (!isset($info[$role->courseid])) {
+                $info[$role->courseid] = array();
+            }
+
+            $infoblock = new \stdClass();
+            $infoblock->roles = array();
+
+            if (isset($info[$role->courseid][$role->username])) {
+                $infoblock = $info[$role->courseid][$role->username];
+            }
+
+            $infoblock->userid = $role->userid;
+            $infoblock->roles[$role->roleid] = $role->role;
+
+            $info[$role->courseid][$role->username] = $infoblock;
+        }
+        unset($currentroles);
+
+        $currentenrols = $this->get_current_enrols();
+        foreach ($currentenrols as $enrol) {
+            if (!isset($info[$enrol->courseid])) {
+                $info[$enrol->courseid] = array();
+            }
+
+            $infoblock = new \stdClass();
+            $infoblock->enrols = array();
+
+            if (isset($info[$enrol->courseid][$enrol->username])) {
+                $infoblock = $info[$enrol->courseid][$enrol->username];
+            }
+
+            $infoblock->userid = $enrol->userid;
+            $infoblock->enrols[$enrol->enrolid] = $enrol->enrol;
+
+            $info[$enrol->courseid][$enrol->username] = $infoblock;
+        }
+        unset($currentenrols);
+
+        return $info;
+    }
+
+    /**
+     * Return a list of everyones roles in all courses.
+     */
+    private function get_current_roles() {
+        global $DB;
+
+        $sql = <<<SQL
+            SELECT ra.id, u.id as userid, u.username, ctx.instanceid as courseid, r.id as roleid, r.shortname as role
+            FROM {role_assignments} ra
+            INNER JOIN {role} r
+                ON r.id=ra.roleid
+            INNER JOIN {user} u
+                ON u.id=ra.userid
+            INNER JOIN {context} ctx
+                ON ctx.id=ra.contextid AND ctx.contextlevel=50
+SQL;
+
+        return $DB->get_records_sql($sql);
+    }
+
+    /**
+     * Return a list of everyone in all courses.
+     */
+    private function get_current_enrols() {
+        global $DB;
+
+        $sql = <<<SQL
+            SELECT ue.id, u.id as userid, u.username, e.courseid, e.id as enrolid, e.enrol as enrol
+            FROM {user_enrolments} ue
+            INNER JOIN {enrol} e
+                ON e.id=ue.enrolid
+            INNER JOIN {user} u
+                ON u.id=ue.userid
+            INNER JOIN {context} ctx
+                ON ctx.instanceid=e.courseid AND ctx.contextlevel=50
+            WHERE e.enrol='manual' OR e.enrol='connect'
+SQL;
+
+        return $DB->get_records_sql($sql);
     }
 }
