@@ -29,40 +29,7 @@ class sync extends \core\task\scheduled_task
     }
 
     public function execute() {
-        global $DB;
-
-        $enrol = enrol_get_plugin('connect');
-
-        // Unfortunately this may take a long time, execution can be interrupted safely here.
-        \core_php_time_limit::raise();
-        raise_memory_limit(MEMORY_HUGE);
-
-        // First, get a list of all instances by course ID.
-        $instances = helpers::get_enrol_instances();
-
-        // Now, get a list of enrolments for each course.
-        $enrolments = helpers::get_enrolments($instances);
-
-        // And get all the roles.
-        $roles = helpers::get_roles();
-
-        $changes = 0;
-        foreach ($instances as $course => $set) {
-            $ctx = \context_course::instance($course, MUST_EXIST);
-
-            $cenrolments = array();
-            if (isset($enrolments[$course])) {
-                $cenrolments = $enrolments[$course];
-            }
-
-            $croles = array();
-            if (isset($roles[$ctx->id])) {
-                $croles = $roles[$ctx->id];
-            }
-
-            $changes += $enrol->sync_bulk($ctx, $course, $set, $cenrolments, $croles);
-        }
-
-        echo "Complete with {$changes} changes!\n";
+        $plugin = enrol_get_plugin('connect');
+        $plugin->global_sync();
     }
 }
