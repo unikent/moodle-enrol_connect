@@ -188,6 +188,11 @@ class enrol_connect_plugin extends enrol_plugin
 
         // Grab a list of all connect instances.
         $enrolinstances = $this->get_enrol_instances($courseid);
+        if (empty($enrolinstances)) {
+            return;
+        }
+
+        // Get the current and latest info to compare.
         $currentinfo = $this->get_current_info($courseid);
         $latestinfo = $this->get_latest_info($courseid);
 
@@ -195,23 +200,20 @@ class enrol_connect_plugin extends enrol_plugin
 
         // New enrols.
         foreach ($latestinfo as $course => $users) {
-            if (!isset($currentinfo[$course])) {
-                continue;
-            }
-
             foreach ($users as $username => $user) {
-                if (!isset($currentinfo[$course][$username])) {
+                if (!isset($currentinfo[$course]) || !isset($currentinfo[$course][$username])) {
                     echo "   Adding user '{$username}' to course '{$course}'..\n";
                     $instance = $enrolinstances[$user->enrolid];
-                    $this->enrol_user($instance, $user->mid, $user->role, 0, 0);
+                    $this->enrol_user($instance, $user->userid, $user->role, 0, 0);
                     continue;
                 }
             }
         }
 
+        // Check old enrols.
         foreach ($currentinfo as $course => $users) {
             if (!isset($latestinfo[$course])) {
-                continue;
+                continue; // TODO?
             }
 
             $context = \context_course::instance($course);
@@ -232,7 +234,7 @@ class enrol_connect_plugin extends enrol_plugin
                 // Add new roles.
                 if (!isset($user->roles[$latest->role])) {
                     echo "   Adding role '{$latest->role}' to user '{$username}' in course '{$course}'..\n";
-                    $instance = $enrolinstances[$latest->enrol];
+                    $instance = $enrolinstances[$latest->enrolid];
                     role_assign($latest->role, $user->userid, $context->id, 'enrol_connect', $instance->id);
                 }
 
@@ -240,7 +242,7 @@ class enrol_connect_plugin extends enrol_plugin
                 foreach ($user->roles as $roleid => $name) {
                     if ($roleid != $latest->role) {
                         echo "   Removing role '{$name}' from user '{$username}' in course '{$course}'..\n";
-                        $instance = $enrolinstances[$latest->enrol];
+                        $instance = $enrolinstances[$latest->enrolid];
                         role_unassign($roleid, $user->userid, $context->id, 'enrol_connect', $instance->id);
                     }
                 }
@@ -273,8 +275,9 @@ class enrol_connect_plugin extends enrol_plugin
                 $infoblock = $info[$role->courseid][$role->username];
             }
 
-            $infoblock->mid = $role->mid;
-            $infoblock->enrol = $role->enrolid;
+            $infoblock->connectuserid = $role->cuserid;
+            $infoblock->userid = $role->userid;
+            $infoblock->enrolid = $role->enrolid;
             $infoblock->role = $role->rolemid;
 
             $info[$role->courseid][$role->username] = $infoblock;
@@ -298,7 +301,7 @@ class enrol_connect_plugin extends enrol_plugin
         }
 
         $sql = <<<SQL
-            SELECT ce.id, cu.login as username, cu.mid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
+            SELECT ce.id, cu.id as cuserid, cu.login as username, cu.mid as userid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
             FROM {connect_enrolments} ce
             INNER JOIN {enrol} e
                 ON e.customint1=ce.courseid AND e.enrol='connect' {$where}
