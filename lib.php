@@ -255,13 +255,9 @@ class enrol_connect_plugin extends enrol_plugin
 
                 // Remove old roles
                 foreach ($user->roles as $roleid => $data) {
-                    if ($roleid != $latest->role) {
+                    if ($roleid != $latest->role && $data->component == 'enrol_connect') {
                         echo "   Removing role '{$data->role}' from user '{$username}' in course '{$course}'..\n";
-                        if (!empty($data->component)) {
-                            role_unassign($roleid, $user->userid, $context->id, $data->component, $data->enrolid);
-                        } else {
-                            role_unassign($roleid, $user->userid, $context->id);
-                        }
+                        role_unassign($roleid, $user->userid, $context->id, $data->component, $data->enrolid);
                     }
                 }
             }
