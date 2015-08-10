@@ -227,7 +227,7 @@ class enrol_connect_plugin extends enrol_plugin
         // Check old enrols.
         foreach ($currentinfo as $course => $users) {
             if (!isset($latestinfo[$course])) {
-                continue; // TODO?
+                $latestinfo[$course] = array();
             }
 
             $context = \context_course::instance($course);
