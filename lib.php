@@ -254,11 +254,14 @@ class enrol_connect_plugin extends enrol_plugin
                 }
 
                 // Remove old roles
-                foreach ($user->roles as $roleid => $name) {
+                foreach ($user->roles as $roleid => $data) {
                     if ($roleid != $latest->role) {
-                        echo "   Removing role '{$name}' from user '{$username}' in course '{$course}'..\n";
-                        $instance = $enrolinstances[$latest->enrolid];
-                        role_unassign($roleid, $user->userid, $context->id, 'enrol_connect', $instance->id);
+                        echo "   Removing role '{$data->role}' from user '{$username}' in course '{$course}'..\n";
+                        if (!empty($data->component)) {
+                            role_unassign($roleid, $user->userid, $context->id, $data->component, $data->enrolid);
+                        } else {
+                            role_unassign($roleid, $user->userid, $context->id);
+                        }
                     }
                 }
             }
@@ -341,15 +344,15 @@ SQL;
                 $info[$role->courseid] = array();
             }
 
-            $infoblock = new \stdClass();
-            $infoblock->roles = array();
-
             if (isset($info[$role->courseid][$role->username])) {
                 $infoblock = $info[$role->courseid][$role->username];
+            } else {
+                $infoblock = new \stdClass();
+                $infoblock->roles = array();
             }
 
             $infoblock->userid = $role->userid;
-            $infoblock->roles[$role->roleid] = $role->role;
+            $infoblock->roles[$role->roleid] = $role;
 
             $info[$role->courseid][$role->username] = $infoblock;
         }
@@ -361,11 +364,11 @@ SQL;
                 $info[$enrol->courseid] = array();
             }
 
-            $infoblock = new \stdClass();
-            $infoblock->enrols = array();
-
             if (isset($info[$enrol->courseid][$enrol->username])) {
                 $infoblock = $info[$enrol->courseid][$enrol->username];
+            } else {
+                $infoblock = new \stdClass();
+                $infoblock->enrols = array();
             }
 
             $infoblock->userid = $enrol->userid;
@@ -392,7 +395,7 @@ SQL;
         }
 
         $sql = <<<SQL
-            SELECT ra.id, u.id as userid, u.username, ctx.instanceid as courseid, r.id as roleid, r.shortname as role
+            SELECT ra.id, u.id as userid, u.username, ctx.instanceid as courseid, r.id as roleid, r.shortname as role, ra.component, ra.itemid as enrolid
             FROM {role_assignments} ra
             INNER JOIN {role} r
                 ON r.id=ra.roleid
