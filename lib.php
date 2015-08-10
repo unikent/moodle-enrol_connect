@@ -203,20 +203,24 @@ class enrol_connect_plugin extends enrol_plugin
             foreach ($users as $username => $user) {
                 // Make sure the user exists.
                 if (empty($user->userid)) {
-                    $user = \local_connect\user::get($user->connectuserid);
-                    if (!$user->create_in_moodle()) {
+                    $obj = \local_connect\user::get($user->connectuserid);
+                    if (!$obj->create_in_moodle()) {
                         continue;
                     }
 
-                    $user->userid = $user->mid;
+                    $user->userid = $obj->mid;
                 }
 
-                if (!isset($currentinfo[$course]) || !isset($currentinfo[$course][$username])) {
-                    echo "   Adding user '{$username}' to course '{$course}'..\n";
-                    $instance = $enrolinstances[$user->enrolid];
-                    $this->enrol_user($instance, $user->userid, $user->role, 0, 0);
-                    continue;
+                // See if we exist already.
+                if (isset($currentinfo[$course]) && isset($currentinfo[$course][$username])) {
+                    if (isset($currentinfo[$course][$username]->enrols[$user->enrolid])) {
+                        continue;
+                    }
                 }
+
+                echo "   Adding user '{$username}' to course '{$course}' with enrol id '{$user->enrolid}'..\n";
+                $instance = $enrolinstances[$user->enrolid];
+                $this->enrol_user($instance, $user->userid, $user->role, 0, 0);
             }
         }
 
