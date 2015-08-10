@@ -160,25 +160,38 @@ class enrol_connect_plugin extends enrol_plugin
     /**
      * Returns a list of all enrol instances by ID.
      */
-    private function get_enrol_instances() {
+    private function get_enrol_instances($courseid = 0) {
         global $DB;
 
-        return $DB->get_records_sql('SELECT * FROM {enrol} WHERE enrol IN (:enrol1, :enrol2)', array(
+        $where = 'enrol IN (:enrol1, :enrol2)';
+        $params = array(
             'enrol1' => 'connect',
             'enrol2' => 'manual',
             'status' => ENROL_INSTANCE_ENABLED
-        ));
+        );
+
+        if ($courseid > 0) {
+            $where .= ' AND courseid = :courseid';
+            $params['courseid'] = $courseid;
+        }
+
+        return $DB->get_records_sql('SELECT * FROM {enrol} WHERE ' . $where, $params);
     }
 
     /**
-     * Run a global sync.
+     * Run a sync against a given courseid, or the whole site.
      */
-    public function global_sync() {
-        $manualplugin = enrol_get_plugin('manual');
+    public function sync($courseid = 0, $enrolinstances = null) {
+        if (!empty($enrolinstances)) {
+            debugging("enrol_connect now expects the \$enrolinstances parameter to be blank when single-syncing.");
+        }
 
-        $enrolinstances = $this->get_enrol_instances();
-        $currentinfo = $this->get_current_info();
-        $latestinfo = $this->get_latest_info();
+        // Grab a list of all connect instances.
+        $enrolinstances = $this->get_enrol_instances($courseid);
+        $currentinfo = $this->get_current_info($courseid);
+        $latestinfo = $this->get_latest_info($courseid);
+
+        $manualplugin = enrol_get_plugin('manual');
 
         // New enrols.
         foreach ($latestinfo as $course => $users) {
@@ -195,7 +208,7 @@ class enrol_connect_plugin extends enrol_plugin
                 }
             }
         }
-        
+
         foreach ($currentinfo as $course => $users) {
             if (!isset($latestinfo[$course])) {
                 continue;
@@ -236,12 +249,19 @@ class enrol_connect_plugin extends enrol_plugin
     }
 
     /**
+     * Run a global sync.
+     */
+    public function global_sync() {
+        return $this->sync(0);
+    }
+
+    /**
      * Grab the latest info.
      */
-    private function get_latest_info() {
+    private function get_latest_info($courseid = 0) {
         $info = array();
 
-        $latestroles = $this->get_latest_roles();
+        $latestroles = $this->get_latest_roles($courseid);
         foreach ($latestroles as $role) {
             if (!isset($info[$role->courseid])) {
                 $info[$role->courseid] = array();
@@ -267,30 +287,37 @@ class enrol_connect_plugin extends enrol_plugin
     /**
      * Return a list of everyones roles in all courses.
      */
-    private function get_latest_roles() {
+    private function get_latest_roles($courseid = 0) {
         global $DB;
+
+        $where = '';
+        $params = array();
+        if ($courseid > 0) {
+            $where = 'AND e.courseid = :courseid';
+            $params['courseid'] = $courseid;
+        }
 
         $sql = <<<SQL
             SELECT ce.id, cu.login as username, cu.mid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
             FROM {connect_enrolments} ce
             INNER JOIN {enrol} e
-                ON e.customint1=ce.courseid AND e.enrol='connect'
+                ON e.customint1=ce.courseid AND e.enrol='connect' {$where}
             INNER JOIN {connect_user} cu
                 ON cu.id=ce.userid
             INNER JOIN {connect_role} cr
                 ON cr.id=ce.roleid
 SQL;
-        
-        return $DB->get_records_sql($sql);
+
+        return $DB->get_records_sql($sql, $params);
     }
 
     /**
      * Merge enrols and roles lists.
      */
-    private function get_current_info() {
+    private function get_current_info($courseid = 0) {
         $info = array();
 
-        $currentroles = $this->get_current_roles();
+        $currentroles = $this->get_current_roles($courseid);
         foreach ($currentroles as $role) {
             if (!isset($info[$role->courseid])) {
                 $info[$role->courseid] = array();
@@ -310,7 +337,7 @@ SQL;
         }
         unset($currentroles);
 
-        $currentenrols = $this->get_current_enrols();
+        $currentenrols = $this->get_current_enrols($courseid);
         foreach ($currentenrols as $enrol) {
             if (!isset($info[$enrol->courseid])) {
                 $info[$enrol->courseid] = array();
@@ -336,8 +363,15 @@ SQL;
     /**
      * Return a list of everyones roles in all courses.
      */
-    private function get_current_roles() {
+    private function get_current_roles($courseid = 0) {
         global $DB;
+
+        $where = '';
+        $params = array();
+        if ($courseid > 0) {
+            $where = 'AND ctx.instanceid = :courseid';
+            $params['courseid'] = $courseid;
+        }
 
         $sql = <<<SQL
             SELECT ra.id, u.id as userid, u.username, ctx.instanceid as courseid, r.id as roleid, r.shortname as role
@@ -347,23 +381,30 @@ SQL;
             INNER JOIN {user} u
                 ON u.id=ra.userid
             INNER JOIN {context} ctx
-                ON ctx.id=ra.contextid AND ctx.contextlevel=50
+                ON ctx.id=ra.contextid AND ctx.contextlevel=50 {$where}
 SQL;
 
-        return $DB->get_records_sql($sql);
+        return $DB->get_records_sql($sql, $params);
     }
 
     /**
      * Return a list of everyone in all courses.
      */
-    private function get_current_enrols() {
+    private function get_current_enrols($courseid = 0) {
         global $DB;
+
+        $where = '';
+        $params = array();
+        if ($courseid > 0) {
+            $where = 'AND e.courseid = :courseid';
+            $params['courseid'] = $courseid;
+        }
 
         $sql = <<<SQL
             SELECT ue.id, u.id as userid, u.username, e.courseid, e.id as enrolid, e.enrol as enrol
             FROM {user_enrolments} ue
             INNER JOIN {enrol} e
-                ON e.id=ue.enrolid
+                ON e.id=ue.enrolid {$where}
             INNER JOIN {user} u
                 ON u.id=ue.userid
             INNER JOIN {context} ctx
@@ -371,6 +412,6 @@ SQL;
             WHERE e.enrol='manual' OR e.enrol='connect'
 SQL;
 
-        return $DB->get_records_sql($sql);
+        return $DB->get_records_sql($sql, $params);
     }
 }
