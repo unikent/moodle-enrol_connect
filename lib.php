@@ -201,6 +201,16 @@ class enrol_connect_plugin extends enrol_plugin
         // New enrols.
         foreach ($latestinfo as $course => $users) {
             foreach ($users as $username => $user) {
+                // Make sure the user exists.
+                if (empty($user->userid)) {
+                    $user = \local_connect\user::get($user->connectuserid);
+                    if (!$user->create_in_moodle()) {
+                        continue;
+                    }
+
+                    $user->userid = $user->mid;
+                }
+
                 if (!isset($currentinfo[$course]) || !isset($currentinfo[$course][$username])) {
                     echo "   Adding user '{$username}' to course '{$course}'..\n";
                     $instance = $enrolinstances[$user->enrolid];
@@ -219,6 +229,7 @@ class enrol_connect_plugin extends enrol_plugin
             $context = \context_course::instance($course);
 
             foreach ($users as $username => $user) {
+                // Remove old roles.
                 if (!isset($latestinfo[$course][$username])) {
                     foreach ($user->enrols as $enrolid => $enrolname) {
                         echo "   Removing user '{$username}' from course '{$course}' ('{$enrolname}' plugin)..\n";
