@@ -181,11 +181,7 @@ class enrol_connect_plugin extends enrol_plugin
     /**
      * Run a sync against a given courseid, or the whole site.
      */
-    public function sync($courseid = 0, $enrolinstances = null) {
-        if (!empty($enrolinstances)) {
-            debugging("enrol_connect now expects the \$enrolinstances parameter to be blank when single-syncing.");
-        }
-
+    public function sync($courseid = 0, $dry = false, $verbose = false) {
         // Grab a list of all connect instances.
         $enrolinstances = $this->get_enrol_instances($courseid);
         if (empty($enrolinstances)) {
@@ -218,9 +214,14 @@ class enrol_connect_plugin extends enrol_plugin
                     }
                 }
 
-                echo "   Adding user '{$username}' to course '{$course}' with enrol id '{$user->enrolid}'..\n";
-                $instance = $enrolinstances[$user->enrolid];
-                $this->enrol_user($instance, $user->userid, $user->role, 0, 0);
+                if ($verbose) {
+                    mtrace(" -> Adding user '{$username}' to course '{$course}' with enrol id '{$user->enrolid}'..");
+                }
+
+                if (!$dry) {
+                    $instance = $enrolinstances[$user->enrolid];
+                    $this->enrol_user($instance, $user->userid, $user->role, 0, 0);
+                }
             }
         }
 
@@ -236,10 +237,15 @@ class enrol_connect_plugin extends enrol_plugin
                 // Remove old roles.
                 if (!isset($latestinfo[$course][$username])) {
                     foreach ($user->enrols as $enrolid => $enrolname) {
-                        echo "   Removing user '{$username}' from course '{$course}' ('{$enrolname}' plugin)..\n";
-                        $instance = $enrolinstances[$enrolid];
-                        $plugin = $enrolname == 'manual' ? $manualplugin : $this;
-                        $plugin->unenrol_user($instance, $user->userid);
+                        if ($verbose) {
+                            mtrace(" -> Removing user '{$username}' from course '{$course}' ('{$enrolname}' plugin)..");
+                        }
+
+                        if (!$dry) {
+                            $instance = $enrolinstances[$enrolid];
+                            $plugin = $enrolname == 'manual' ? $manualplugin : $this;
+                            $plugin->unenrol_user($instance, $user->userid);
+                        }
                     }
                     continue;
                 }
@@ -248,16 +254,26 @@ class enrol_connect_plugin extends enrol_plugin
 
                 // Add new roles.
                 if (!isset($user->roles[$latest->role])) {
-                    echo "   Adding role '{$latest->role}' to user '{$username}' in course '{$course}'..\n";
-                    $instance = $enrolinstances[$latest->enrolid];
-                    role_assign($latest->role, $user->userid, $context->id, 'enrol_connect', $instance->id);
+                    if ($verbose) {
+                        mtrace(" -> Adding role '{$latest->role}' to user '{$username}' in course '{$course}'..");
+                    }
+
+                    if (!$dry) {
+                        $instance = $enrolinstances[$latest->enrolid];
+                        role_assign($latest->role, $user->userid, $context->id, 'enrol_connect', $instance->id);
+                    }
                 }
 
                 // Remove old roles
                 foreach ($user->roles as $roleid => $data) {
                     if ($roleid != $latest->role && $data->component == 'enrol_connect') {
-                        echo "   Removing role '{$data->role}' from user '{$username}' in course '{$course}'..\n";
-                        role_unassign($roleid, $user->userid, $context->id, $data->component, $data->enrolid);
+                        if ($verbose) {
+                            mtrace(" -> Removing role '{$data->role}' from user '{$username}' in course '{$course}'..");
+                        }
+
+                        if (!$dry) {
+                            role_unassign($roleid, $user->userid, $context->id, $data->component, $data->enrolid);
+                        }
                     }
                 }
             }
@@ -267,8 +283,8 @@ class enrol_connect_plugin extends enrol_plugin
     /**
      * Run a global sync.
      */
-    public function global_sync() {
-        return $this->sync(0);
+    public function global_sync($dry = false, $verbose = false) {
+        return $this->sync($dry, $verbose);
     }
 
     /**

@@ -50,20 +50,14 @@ class enrol_tests extends \local_connect\tests\connect_testcase
         $this->assertEquals(0, count($users));
 
         // Sync the users.
-        ob_start();
         $courseobj->sync_enrolments();
-        $contents = ob_get_clean();
-        $this->assertEquals(31, count(explode("\n", $contents)));
 
         // Re-count the users.
         $users = get_enrolled_users($context);
         $this->assertEquals(30, count($users));
 
         // Re-sync and count, to make sure we don't do anything.
-        ob_start();
         $courseobj->sync_enrolments();
-        $contents = ob_get_clean();
-        $this->assertEquals(1, count(explode("\n", $contents)));
 
         // Re-count.
         $users = get_enrolled_users($context);
@@ -74,10 +68,7 @@ class enrol_tests extends \local_connect\tests\connect_testcase
         $teacher = $this->generate_enrolment($course, 'sds_teacher');
 
         // Sync the users.
-        ob_start();
         $courseobj->sync_enrolments();
-        $contents = ob_get_clean();
-        $this->assertEquals(4, count(explode("\n", $contents)));
 
         // Re-count the users.
         $users = get_enrolled_users($context);
@@ -89,10 +80,7 @@ class enrol_tests extends \local_connect\tests\connect_testcase
         ));
 
         // Sync the users.
-        ob_start();
         $courseobj->sync_enrolments();
-        $contents = ob_get_clean();
-        $this->assertEquals(2, count(explode("\n", $contents)));
 
         // Re-count the users.
         $users = get_enrolled_users($context);
