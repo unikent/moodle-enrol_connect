@@ -33,9 +33,18 @@ define('CLI_SCRIPT', true);
 require(dirname(__FILE__) . '/../../../config.php');
 require_once($CFG->libdir . "/clilib.php");
 
-if (!enrol_is_enabled('connect')) {
-    cli_error('enrol_connect plugin is disabled, synchronisation stopped', 2);
+list($options, $unrecognized) = cli_get_params(array(
+    'course' => 0,
+    'dry' => 0,
+    'verbose' => 1
+));
+
+$options['dry'] = $options['dry'] == 1 ? true : false;
+$options['verbose'] = $options['verbose'] == 0 ? false : true;
+
+if ($options['dry']) {
+    mtrace("Running enrol sync in dry mode.");
 }
 
 $plugin = enrol_get_plugin('connect');
-$plugin->cron();
+$plugin->sync($options['course'], $options['dry'], $options['verbose']);
