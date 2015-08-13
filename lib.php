@@ -256,7 +256,7 @@ class enrol_connect_plugin extends enrol_plugin
                 $latest = $latestinfo[$course][$username];
 
                 // Add new roles.
-                if (!isset($user->roles[$latest->role])) {
+                if (!empty($latest->role) && !isset($user->roles[$latest->role])) {
                     if ($verbose) {
                         mtrace(" -> Adding role '{$latest->role}' to user '{$username}' in course '{$course}'..");
                     }
