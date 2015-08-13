@@ -336,7 +336,7 @@ class enrol_connect_plugin extends enrol_plugin
         global $DB;
 
         $sql = <<<SQL
-            SELECT ce.id, cu.id as cuserid, cu.login as username, cu.mid as userid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
+            SELECT ce.id, cu.id as cuserid, LOWER(cu.login) as username, cu.mid as userid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
             FROM {connect_enrolments} ce
             INNER JOIN {enrol} e
                 ON e.customint1=ce.courseid AND e.enrol='connect' AND e.courseid = :courseid
@@ -407,7 +407,7 @@ SQL;
         global $DB;
 
         $sql = <<<SQL
-            SELECT ra.id, u.id as userid, u.username, ctx.instanceid as courseid, r.id as roleid, r.shortname as role, ra.component, ra.itemid as enrolid
+            SELECT ra.id, u.id as userid, LOWER(u.username) as username, ctx.instanceid as courseid, r.id as roleid, r.shortname as role, ra.component, ra.itemid as enrolid
             FROM {role_assignments} ra
             INNER JOIN {role} r
                 ON r.id=ra.roleid
@@ -429,7 +429,7 @@ SQL;
         global $DB;
 
         $sql = <<<SQL
-            SELECT ue.id, u.id as userid, u.username, e.courseid, e.id as enrolid, e.enrol as enrol
+            SELECT ue.id, u.id as userid, LOWER(u.username) as username, e.courseid, e.id as enrolid, e.enrol as enrol
             FROM {user_enrolments} ue
             INNER JOIN {enrol} e
                 ON e.id=ue.enrolid AND e.courseid = :courseid
