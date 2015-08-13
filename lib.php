@@ -425,7 +425,7 @@ SQL;
     /**
      * Return a list of everyone in all courses.
      */
-    private function get_current_enrols() {
+    private function get_current_enrols($courseid) {
         global $DB;
 
         $sql = <<<SQL
