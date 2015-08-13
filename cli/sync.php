@@ -47,4 +47,9 @@ if ($options['dry']) {
 }
 
 $plugin = enrol_get_plugin('connect');
-$plugin->sync($options['course'], $options['dry'], $options['verbose']);
+
+if (empty($options['course'])) {
+    $plugin->global_sync($options['dry'], $options['verbose']);
+} else {
+    $plugin->sync($options['course'], $options['dry'], $options['verbose']);
+}

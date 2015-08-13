@@ -31,5 +31,7 @@ class sync extends \core\task\scheduled_task
     public function execute() {
         $plugin = enrol_get_plugin('connect');
         $plugin->global_sync();
+
+        return true;
     }
 }
