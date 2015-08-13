@@ -284,7 +284,16 @@ class enrol_connect_plugin extends enrol_plugin
      * Run a global sync.
      */
     public function global_sync($dry = false, $verbose = false) {
-        return $this->sync($dry, $verbose);
+        global $DB;
+
+        $courses = $DB->get_records('course', null, '', 'id');
+        foreach ($courses as $course) {
+            if ($verbose) {
+                mtrace("Syncing {$course->id}...");
+            }
+
+            $this->sync($course->id, $dry, $verbose);
+        }
     }
 
     /**
