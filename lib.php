@@ -238,8 +238,9 @@ class enrol_connect_plugin extends enrol_plugin
 
             foreach ($users as $username => $user) {
                 // Remove old roles.
-                if (!isset($latestinfo[$course][$username])) {
-                    foreach ($user->enrols as $enrolid => $enrolname) {
+                foreach ($user->enrols as $enrolid => $enrolname) {
+                    if (($enrolname == 'manual' && isset($latestinfo[$course][$username])) ||
+                        ($enrolname == 'connect' && !isset($latestinfo[$course][$username]))) {
                         if ($verbose) {
                             mtrace(" -> Removing user '{$username}' from course '{$course}' ('{$enrolname}' plugin)..");
                         }
@@ -250,7 +251,6 @@ class enrol_connect_plugin extends enrol_plugin
                             $plugin->unenrol_user($instance, $user->userid);
                         }
                     }
-                    continue;
                 }
 
                 $latest = $latestinfo[$course][$username];
