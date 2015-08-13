@@ -253,6 +253,10 @@ class enrol_connect_plugin extends enrol_plugin
                     }
                 }
 
+                if (!isset($latestinfo[$course][$username])) {
+                    continue;
+                }
+
                 $latest = $latestinfo[$course][$username];
 
                 // Add new roles.
