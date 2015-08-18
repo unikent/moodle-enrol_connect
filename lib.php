@@ -82,6 +82,17 @@ class enrol_connect_plugin extends enrol_plugin
     }
 
     /**
+     * Is it possible to delete enrol instance via standard UI?
+     *
+     * @param object $instance
+     * @return bool
+     */
+    public function can_delete_instance($instance) {
+        $context = context_course::instance($instance->courseid);
+        return has_capability('enrol/connect:config', $context);
+    }
+
+    /**
      * Is it possible to hide/show enrol instance via standard UI?
      *
      * @param stdClass $instance
