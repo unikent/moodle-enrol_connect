@@ -350,6 +350,7 @@ class enrol_connect_plugin extends enrol_plugin
     private function get_latest_roles($courseid) {
         global $DB;
 
+        // GROUP BY ce.id in case we have two enrol instances with the same ce.courseid.
         $sql = <<<SQL
             SELECT ce.id, cu.id as cuserid, LOWER(cu.login) as username, cu.mid as userid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
             FROM {connect_enrolments} ce
@@ -359,6 +360,7 @@ class enrol_connect_plugin extends enrol_plugin
                 ON cu.id=ce.userid
             INNER JOIN {connect_role} cr
                 ON cr.id=ce.roleid
+            GROUP BY ce.id
 SQL;
 
         return $DB->get_records_sql($sql, array(
