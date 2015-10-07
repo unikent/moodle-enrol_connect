@@ -76,6 +76,7 @@ if ($instanceid) {
     $instance->courseid   = $course->id;
     $instance->enrol      = 'connect';
     $instance->customint1 = 0; // Course MID.
+    $instance->customtext1 = 'A,J,P,R,T,W,Y,H';
 }
 
 // Try and make the manage instances node on the navigation active.
@@ -93,12 +94,14 @@ if ($mform->is_cancelled()) {
     if ($instance->id) {
         $instance->status       = $data->status;
         $instance->customint1   = $data->customint1;
+        $instance->customtext1   = $data->customtext1;
         $instance->timemodified = time();
         $DB->update_record('enrol', $instance);
     } else {
         $enrol->add_instance($course, array(
             'status' => $data->status,
-            'customint1' => $data->customint1
+            'customint1' => $data->customint1,
+            'customtext1' => $data->customtext1
         ));
     }
 

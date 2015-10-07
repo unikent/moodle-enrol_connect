@@ -30,5 +30,5 @@ $plugin->requires  = 2014050800;        // Requires this Moodle version.
 $plugin->component = 'enrol_connect';   // Full name of the plugin (used for diagnostics).
 
 $plugin->dependencies = array(
-    'local_connect' => 2015081000
+    'local_connect' => 2015100700
 );
