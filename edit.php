@@ -113,4 +113,27 @@ $PAGE->set_title(get_string('pluginname', 'enrol_connect'));
 
 echo $OUTPUT->header();
 $mform->display();
+
+echo <<<HTML5
+        <p>Available status codes:</p>
+        <pre>
+        ?      Not Known
+        A      Not here, not registered
+        C      Here but not yet registered
+        D      Record for deletion
+        H      Holding / Awaiting further information
+        I      Intermission
+        J      Resit candidate
+        M      Modular student, not in attendance
+        P      Provisional registration
+        R      Registered
+        S      Sabbatical Officer having completed POS
+        T      Thesis submitted
+        W      Writing up
+        X      Record for archiving
+        Y      Compulsory year abroad / placement
+        Z      Deferred entry
+        </pre>
+HTML5;
+
 echo $OUTPUT->footer();
