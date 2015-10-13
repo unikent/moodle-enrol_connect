@@ -49,7 +49,7 @@ class enrol_connect_edit_form extends moodleform {
         $mform->addElement('text', 'customtext1', 'Allowed status codes');
         $status = $plugin->get_config('customtext1');
         if (empty($status)) {
-            $status = 'A,J,P,R,T,W,Y,H';
+            $status = 'A,J,P,R,T,W,Y,H,?';
         }
         $mform->setDefault('customtext1', $status);
         $mform->setType('customtext1', PARAM_TAGLIST);
