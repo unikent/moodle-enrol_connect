@@ -46,8 +46,19 @@ class enrol_connect_edit_form extends moodleform {
         $mform->setDefault('customint1', $plugin->get_config('customint1'));
         $mform->setType('customint1', PARAM_INT);
 
+        $mform->addElement('text', 'customtext1', 'Allowed status codes');
+        $status = $plugin->get_config('customtext1');
+        if (empty($status)) {
+            $status = 'A,J,P,R,T,W,Y,H';
+        }
+        $mform->setDefault('customtext1', $status);
+        $mform->setType('customtext1', PARAM_TAGLIST);
+
         $mform->addElement('hidden', 'courseid');
         $mform->setType('courseid', PARAM_INT);
+
+        $mform->addElement('hidden', 'id');
+        $mform->setType('id', PARAM_INT);
 
         $this->add_action_buttons(true, ($instance->id ? null : 'Add Instance'));
 

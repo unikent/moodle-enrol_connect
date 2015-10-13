@@ -133,7 +133,6 @@ class enrol_connect_plugin extends enrol_plugin
         $context = context_course::instance($instance->courseid);
 
         $icons = array();
-
         if (has_capability('enrol/connect:config', $context)) {
             $editlink = new moodle_url("/enrol/connect/edit.php", array(
                 'id' => $instance->id,
@@ -322,6 +321,15 @@ class enrol_connect_plugin extends enrol_plugin
 
         $latestroles = $this->get_latest_roles($courseid);
         foreach ($latestroles as $role) {
+            // First, check the statuses are okay.
+            if ($role->allowedstatuses !== '*') {
+                $status = $role->status;
+                $allowed = explode(',', !empty($role->allowedstatuses) ? $role->allowedstatuses : 'A,J,P,R,T,W,Y,H');
+                if (!in_array($status, $allowed)) {
+                    continue;
+                }
+            }
+
             if (!isset($info[$role->courseid])) {
                 $info[$role->courseid] = array();
             }
@@ -352,7 +360,7 @@ class enrol_connect_plugin extends enrol_plugin
 
         // GROUP BY ce.id in case we have two enrol instances with the same ce.courseid.
         $sql = <<<SQL
-            SELECT ce.id, cu.id as cuserid, LOWER(cu.login) as username, cu.mid as userid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
+            SELECT ce.id, ce.status, e.customtext1 as allowedstatuses, cu.id as cuserid, LOWER(cu.login) as username, cu.mid as userid, e.id as enrolid, e.courseid, cr.name as role, cr.mid as rolemid
             FROM {connect_enrolments} ce
             INNER JOIN {enrol} e
                 ON e.customint1=ce.courseid AND e.enrol='connect' AND e.courseid = :courseid
