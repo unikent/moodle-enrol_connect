@@ -76,7 +76,7 @@ if ($instanceid) {
     $instance->courseid   = $course->id;
     $instance->enrol      = 'connect';
     $instance->customint1 = 0; // Course MID.
-    $instance->customtext1 = 'A,J,P,R,T,W,Y,H,?';
+    $instance->customtext1 = get_config('enrol_connect', 'defaultstatuses');
 }
 
 // Try and make the manage instances node on the navigation active.
