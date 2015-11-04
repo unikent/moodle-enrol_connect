@@ -324,7 +324,7 @@ class enrol_connect_plugin extends enrol_plugin
             // First, check the statuses are okay.
             if ($role->allowedstatuses !== '*') {
                 $status = $role->status;
-                $allowed = explode(',', !empty($role->allowedstatuses) ? $role->allowedstatuses : 'A,J,P,R,T,W,Y,H,?');
+                $allowed = explode(',', !empty($role->allowedstatuses) ? $role->allowedstatuses : get_config('enrol_connect', 'defaultstatuses'));
                 if (!in_array($status, $allowed)) {
                     continue;
                 }
