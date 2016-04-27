@@ -106,6 +106,8 @@ if ($mform->is_cancelled()) {
     }
 
     redirect($returnurl);
+} else {
+    $mform->set_data($instance);
 }
 
 $PAGE->set_heading($course->fullname);

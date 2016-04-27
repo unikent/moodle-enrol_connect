@@ -61,8 +61,6 @@ class enrol_connect_edit_form extends moodleform {
         $mform->setType('id', PARAM_INT);
 
         $this->add_action_buttons(true, ($instance->id ? null : 'Add Instance'));
-
-        $this->set_data($instance);
     }
 
     public function validation($data, $files) {
