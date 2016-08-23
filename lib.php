@@ -393,6 +393,7 @@ SQL;
             } else {
                 $infoblock = new \stdClass();
                 $infoblock->roles = array();
+                $infoblock->enrols = array();
             }
 
             $infoblock->userid = $role->userid;
