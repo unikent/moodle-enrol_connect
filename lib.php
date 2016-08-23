@@ -414,6 +414,7 @@ SQL;
             } else {
                 $infoblock = new \stdClass();
                 $infoblock->enrols = array();
+                $infoblock->roles = array();
             }
 
             $infoblock->userid = $enrol->userid;
